@@ -16,14 +16,14 @@
 
 #define PLAYER_FLASH_RATE 2
 
-#define ENEMY_FLASH_RATE 10
+#define ENEMY_FLASH_RATE 5
 
 #define height 31
 #define width 32
 
 #define VISIBILITY 10
 
-int nodes1[62] = {0x7fff, 0xffff, 0x4000, 0x0001, 0x577d, 0x75fd, 
+int map[62] = {0x7fff, 0xffff, 0x4000, 0x0001, 0x577d, 0x75fd, 
 0x5405, 0x5505, 0x57df, 0xdddd, 0x5050, 0x0011, 0x5fdf, 0x5ff5, 
 0x4401, 0x5005, 0x75fd, 0xd577, 0x5505, 0x5551, 0x575d, 0x5f5d, 
 0x4011, 0x0005, 0x5dd7, 0x7ffd, 0x5154, 0x5001, 0x5d75, 0x5dfd, 
@@ -32,9 +32,7 @@ int nodes1[62] = {0x7fff, 0xffff, 0x4000, 0x0001, 0x577d, 0x75fd,
 0x4514, 0x0541, 0x5d55, 0x755d, 0x5155, 0x5551, 0x5777, 0x5d75, 
 0x5400, 0x4005, 0x577f, 0x7ffd, 0x4040, 0x0001, 0x7fff, 0xffff};
 
-int* maps[1] = {nodes1};
-    
-int* nodes = 0;
+int* nodes;
     
 static bool p1flash;
 static bool eflash;
@@ -133,12 +131,18 @@ void update (Position player1, Position enemy)
 {
     tinygl_clear();
     tinygl_draw_point(tinygl_point (2, 3), p1flash);
+    int k = 0;
     for ( int i = 0; i < 5; i++ )
 	{
 		for ( int j = 0; j < 7; j++ )
 		{
             if (((i+player1.x-2) >= 0) & ((i+player1.x-2) < width)) {
                 if (((j+player1.y-3) >= 0) & ((j+player1.y-3) < height)) {
+                    for (k = 0; k < 20; k++) {
+                        if (((i+player1.x-2) == objects_maps[0][k].x) & ((j+player1.y-3) == objects_maps[0][k].y)) {
+                            tinygl_draw_point(tinygl_point (i, j), !eflash);
+                            }
+                        }
                     if (((i+player1.x-2) == enemy.x) & ((j+player1.y-3) == enemy.y)) {
                         tinygl_draw_point(tinygl_point (i, j), eflash);
                     } else if (move((i+player1.x-2),(j+player1.y-3))) {
@@ -227,11 +231,17 @@ int main ( void )
         for (int loop = 1; loop < 251; loop++) {
             pacer_wait();
             if (navswitch_push_event_p (NAVSWITCH_PUSH) & !built) {
-                r = loop / 50;
-                nodes = maps[0];
+                for (int i = 0; i < 20; i++) {
+                    srand(loop+i);
+                    int x = (rand() % 29) + 2;
+                    srand((2*loop)+i);
+                    int y = (rand() % 30) + 1;
+                    objects_maps[0][i].x = x;
+                    objects_maps[0][i].y = y;
+                }
+                nodes = map;
                 built = 1;
             }
-            
             if (loop % (PACER_RATE/DISPLAY_TASK_RATE) == 0) {
                 update(player1, enemy);
             }
