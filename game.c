@@ -138,7 +138,7 @@ void update (Position player1, Position enemy)
 		{
             if (((i+player1.x-2) >= 0) & ((i+player1.x-2) < width)) {
                 if (((j+player1.y-3) >= 0) & ((j+player1.y-3) < height)) {
-                    for (k = 0; k < 20; k++) {
+                    for (k = 0; k < 5; k++) {
                         if (((i+player1.x-2) == objects_maps[0][k].x) & ((j+player1.y-3) == objects_maps[0][k].y)) {
                             tinygl_draw_point(tinygl_point (i, j), !eflash);
                             }
@@ -224,20 +224,24 @@ int main ( void )
     pacer_init(PACER_RATE);
     Position player1 = position_init(2,1);
     Position enemy = position_init(4,1);
-    
+    int max = 5;
     int built = 0;
     while(1)
     {
         for (int loop = 1; loop < 251; loop++) {
             pacer_wait();
             if (navswitch_push_event_p (NAVSWITCH_PUSH) & !built) {
-                for (int i = 0; i < 20; i++) {
+                for (int i = 0; i < max; i++) {
                     srand(loop+i);
                     int x = (rand() % 29) + 2;
                     srand((2*loop)+i);
                     int y = (rand() % 30) + 1;
-                    objects_maps[0][i].x = x;
-                    objects_maps[0][i].y = y;
+                    if (!move(x,y)) {
+                        objects_maps[0][i].x = x;
+                        objects_maps[0][i].y = y;
+                    } else {
+                        max++;
+                    }
                 }
                 nodes = map;
                 built = 1;
