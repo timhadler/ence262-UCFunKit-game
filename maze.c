@@ -63,8 +63,13 @@ static int player_score = 0;
 static int r = 0;
 
 
-void tinygl_initialization(void)
+void game_init(void)
 {
+    system_init();
+    button_init ();
+    navswitch_init ();
+    pacer_init(PACER_RATE);
+    
     tinygl_init (DISPLAY_TASK_RATE);
     tinygl_font_set (&font3x5_1);
     tinygl_text_speed_set (10);
@@ -94,7 +99,7 @@ void outro(void)
     char* ending_message;
     tinygl_text(ending_message);
     
-    while (1)) {
+    while (1) {
     pacer_wait ();
         
     tinygl_update ();
@@ -170,6 +175,7 @@ Position navswitch_task(Position player1)
 
 void update (Position player1, Position enemy)
 {
+    tinygl_text_mode_set (TINYGL_TEXT_MODE_STEP);
     tinygl_clear();
     tinygl_draw_point(tinygl_point (2, 3), p1flash);
     int k = 0;
@@ -256,20 +262,14 @@ Position update_enemy(Position player1, Position enemy)
 
 int main ( void )
 {
-    system_init();
-    button_init ();
-    navswitch_init ();
-    tinygl_initialization();
-    pacer_init(PACER_RATE);
+    game_init();
+    
     Position player1 = position_init(2,1);
     Position enemy = position_init(4,1);
     int max = 5;
     int built = 0;
-    
-    
+
     intro();
-    tinygl_text_mode_set (TINYGL_TEXT_MODE_STEP);
-    
     while(1)
     {
         for (int loop = 1; loop < 251; loop++) {
