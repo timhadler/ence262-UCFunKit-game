@@ -115,6 +115,7 @@ void outro(void)
     tinygl_text_mode_set (TINYGL_TEXT_MODE_SCROLL);
     
     tinygl_clear();
+    
     char* ending_message = "THATS IT.GAME OVER MAN GAME OVER\0";
     tinygl_text(ending_message);
     
@@ -126,7 +127,6 @@ void outro(void)
     navswitch_update ();
     }
 }
-//.
 
 
 int move(int x, int y)
@@ -232,9 +232,9 @@ void navswitch_task(int loop)
     if (navswitch_push_event_p (NAVSWITCH_PUSH)) {
         if (is_on_object(player1, loop)) {
             tinygl_clear();
-            score[0]++;
+            p1_score[0]++;
             change_score = 250;
-            if (score[0] > '3') {
+            if (p1_score[0] > '3') {
                 gg = 1;
             }
         }
@@ -244,7 +244,7 @@ void navswitch_task(int loop)
 void got_rekt(int loop)
 {
     tinygl_clear();
-    score[1]++;
+    p1_score[1]++;
     change_score = 250;
     int max = 1;
     for (int i = 0; i < max; i++) {
@@ -258,7 +258,7 @@ void got_rekt(int loop)
             max++;
         }
     }
-    if (score[1] > '3') {
+    if (p1_score[1] > '3') {
         gg = 1;
     }
 }
@@ -270,7 +270,7 @@ void update (int loop)
             got_rekt(loop);
         }
         if (change_score) {
-            tinygl_text(score);
+            tinygl_text(p1_score);
             change_score--;
         } else {
             tinygl_clear();
