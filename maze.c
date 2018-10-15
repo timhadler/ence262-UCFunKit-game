@@ -5,7 +5,6 @@
 #include "tinygl.h"
 #include "../fonts/font3x5_1.h"
 #include "navswitch.h"
-#include <time.h>
 #include <stdlib.h>
 
 /* Define polling rates in Hz.  */
@@ -17,10 +16,14 @@
 
 #define PLAYER_FLASH_RATE 2
 
+#define ENEMY_FLASH_RATE 5
+
 #define height 31
 #define width 32
 
-int nodes1[62] = {0x7fff, 0xffff, 0x4000, 0x0001, 0x577d, 0x75fd, 
+#define VISIBILITY 10
+
+int map[62] = {0x7fff, 0xffff, 0x4000, 0x0001, 0x577d, 0x75fd, 
 0x5405, 0x5505, 0x57df, 0xdddd, 0x5050, 0x0011, 0x5fdf, 0x5ff5, 
 0x4401, 0x5005, 0x75fd, 0xd577, 0x5505, 0x5551, 0x575d, 0x5f5d, 
 0x4011, 0x0005, 0x5dd7, 0x7ffd, 0x5154, 0x5001, 0x5d75, 0x5dfd, 
@@ -29,58 +32,24 @@ int nodes1[62] = {0x7fff, 0xffff, 0x4000, 0x0001, 0x577d, 0x75fd,
 0x4514, 0x0541, 0x5d55, 0x755d, 0x5155, 0x5551, 0x5777, 0x5d75, 
 0x5400, 0x4005, 0x577f, 0x7ffd, 0x4040, 0x0001, 0x7fff, 0xffff};
 
-int nodes2[62] = {0x7fff, 0xffff, 0x4001, 0x0001, 0x5ddd, 0xddfd, 
-0x5544, 0x4511, 0x575f, 0x5d5d, 0x5041, 0x5145, 0x55dd, 0x7d75, 
-0x5515, 0x105, 0x5575, 0x7f75, 0x4511, 0x4055, 0x5ddf, 0x7dd5, 
-0x5040, 0x455, 0x57dd, 0xf75d, 0x5415, 0x141, 0x5575, 0xff7d, 
-0x5544, 0x45, 0x5555, 0xdfdd, 0x4545, 0x5111, 0x575d, 0x7dd7, 
-0x5050, 0x455, 0x5757, 0xf755, 0x5454, 0x111, 0x5fd7, 0xff5d, 
-0x4050, 0x45, 0x5fdd, 0xfddd, 0x5005, 0x411, 0x5d5d, 0xd7dd, 
-0x4550, 0x5045, 0x5ddf, 0xd07d, 0x5000, 0x1001, 0x7fff, 0xffff};
-
-int nodes3[62] = {0x7fff, 0xffff, 0x4400, 0x0141, 0x5d5c, 0x1775, 
-0x5550, 0x1415, 0x5770, 0x177d, 0x5000, 0x1041, 0x575c, 0x1f71, 
-0x5450, 0x0011, 0x5777, 0x1dd1, 0x4145, 0x1151, 0x5ddd, 0xf155, 
-0x4400, 0x0115, 0x5d7c, 0x7155, 0x5104, 0x5155, 0x5d7f, 0xddd5, 
-0x4140, 0x0005, 0x775f, 0x7075, 0x5450, 0x1051, 0x545c, 0x77dd, 
-0x4444, 0x0005, 0x5c77, 0xdc07, 0x4040, 0x5001, 0x5777, 0x5c01, 
-0x5114, 0x4001, 0x5dd7, 0x5c01, 0x5040, 0x0001, 0x5fd7, 0x77f5, 
-0x4011, 0x1015, 0x5c11, 0xf01d, 0x4010, 0x0001, 0x7fff, 0xffff};
-
-int nodes4[62] = {0x7fff, 0xffff, 0x4100, 0x1101, 0x577f, 0xddf7, 
-0x5140, 0x0411, 0x5f7f, 0xd5d5, 0x4005, 0x5455, 0x5dd5, 0x77dd, 
-0x4545, 0x0101, 0x5d7d, 0xf75d, 0x5001, 0x4051, 0x5f77, 0x7ddd, 
-0x4154, 0x0501, 0x5757, 0x5d5d, 0x5011, 0x4141, 0x5fd5, 0xdd5d, 
-0x4004, 0x1055, 0x5ff7, 0x5fd5, 0x5010, 0x4011, 0x5f75, 0xddf7, 
-0x4055, 0x1445, 0x57d5, 0x55dd, 0x5005, 0x5101, 0x57dd, 0x777d, 
-0x5151, 0x0441, 0x715f, 0x7775, 0x4100, 0x1015, 0x5ddd, 0xdfdd, 
-0x4455, 0x4141, 0x5f75, 0x5f7d, 0x4000, 0x4001, 0x7fff, 0xffff};
-
-int nodes5[62] = {0x7fff, 0xffff, 0x4010, 0x0001, 0x5f7d, 0xd7dd, 
-0x4501, 0x5515, 0x5557, 0x5d75, 0x5151, 0x0505, 0x5d5d, 0x55d5, 
-0x4501, 0x5015, 0x55ff, 0x5ddd, 0x5400, 0x4101, 0x77f5, 0x7d75, 
-0x4414, 0x0555, 0x5555, 0xdd55, 0x5441, 0x5555, 0x75df, 0x5555, 
-0x5514, 0x5115, 0x5555, 0xd755, 0x5150, 0x0055, 0x5777, 0x7755, 
-0x5401, 0x5455, 0x57f7, 0x5775, 0x5004, 0x5155, 0x5df7, 0x5d55, 
-0x4141, 0x4045, 0x5f57, 0xfddd, 0x5454, 0x0501, 0x55d5, 0xdddd, 
-0x4515, 0x1051, 0x5dd5, 0x7f5d, 0x4041, 0x0005, 0x7fff, 0xffff};
-
-int* maps[5] = {nodes1, nodes2, nodes3, nodes4, nodes5};
+int* nodes;
     
-int* nodes = 0;
-    
-static bool flash;
+static bool p1flash;
+static bool eflash;
 
 typedef struct position_s {
     int x;
     int y;
 } Position;
 
-Position position_init (void)
+Position route[VISIBILITY+1] = {0};
+int ds[8] = {1, 0, -1, 0, 0, 1, 0, -1};
+
+Position position_init (int x, int y)
 {
     Position position;
-    position.x = 2;
-    position.y = 1;
+    position.x = x;
+    position.y = y;
     return position;
 }
 
@@ -92,7 +61,48 @@ Position* objects_maps[] = {objects1, objects2};
 
 static int player_score = 0;
 static int r = 0;
+
+
+void tinygl_initialization(void)
+{
+    tinygl_init (DISPLAY_TASK_RATE);
+    tinygl_font_set (&font3x5_1);
+    tinygl_text_speed_set (10);
+}
+
+
+void intro(void)
+{
+    tinygl_text_mode_set (TINYGL_TEXT_MODE_SCROLL);
+    
+    char* intro_message = "MAZE!";
+    tinygl_text(intro_message);
+    
+    while (!navswitch_push_event_p(NAVSWITCH_PUSH)) {
+        pacer_wait ();
+        
+        tinygl_update ();
+        navswitch_update ();
+    }
+}
+
+
+void outro(void)
+{
+    tinygl_text_mode_set (TINYGL_TEXT_MODE_SCROLL);
+    
+    char* ending_message;
+    tinygl_text(ending_message);
+    
+    while (1)) {
+    pacer_wait ();
+        
+    tinygl_update ();
+    navswitch_update ();
+    }
+}
 //.
+
 
 int move(int x, int y)
 {
@@ -127,48 +137,56 @@ bool is_on_object(Position position)
 }    
 
 
-Position navswitch_task(Position position)
+Position navswitch_task(Position player1)
 {
     navswitch_update ();
-    int x = position.x;
-    int y = position.y;
+    int x = player1.x;
+    int y = player1.y;
     if (navswitch_push_event_p (NAVSWITCH_NORTH))
         if ((y > 0) & !(move(x,(y-1))))
-            position.y--;
+            player1.y--;
 
     if (navswitch_push_event_p (NAVSWITCH_SOUTH))
         if ((y < height) & !(move(x,(y+1))))
-            position.y++;
+            player1.y++;
         
     if (navswitch_push_event_p (NAVSWITCH_EAST))
         if ((x < width) & !(move((x+1),y)))
-            position.x++;
+            player1.x++;
         
     if (navswitch_push_event_p (NAVSWITCH_WEST))
         if ((x > 1) & !(move((x-1),y)))
-            position.x--;
+            player1.x--;
     
     // picking up object event
     if (navswitch_push_event_p (NAVSWITCH_PUSH)) 
-        if (is_on_object(position))
+        if (is_on_object(player1))
             player_score++;
             
-    return position;
+    return player1;
 }
 
 
 
-void update (Position position)
+void update (Position player1, Position enemy)
 {
     tinygl_clear();
-    tinygl_draw_point(tinygl_point (2, 3), flash);
+    tinygl_draw_point(tinygl_point (2, 3), p1flash);
+    int k = 0;
     for ( int i = 0; i < 5; i++ )
 	{
 		for ( int j = 0; j < 7; j++ )
 		{
-            if (((i+position.x-2) >= 0) & ((i+position.x-2) < width)) {
-                if (((j+position.y-3) >= 0) & ((j+position.y-3) < height)) {
-                    if (move((i+position.x-2),(j+position.y-3))) {
+            if (((i+player1.x-2) >= 0) & ((i+player1.x-2) < width)) {
+                if (((j+player1.y-3) >= 0) & ((j+player1.y-3) < height)) {
+                    for (k = 0; k < 5; k++) {
+                        if (((i+player1.x-2) == objects_maps[0][k].x) & ((j+player1.y-3) == objects_maps[0][k].y)) {
+                            tinygl_draw_point(tinygl_point (i, j), !eflash);
+                            }
+                        }
+                    if (((i+player1.x-2) == enemy.x) & ((j+player1.y-3) == enemy.y)) {
+                        tinygl_draw_point(tinygl_point (i, j), eflash);
+                    } else if (move((i+player1.x-2),(j+player1.y-3))) {
                         tinygl_draw_point(tinygl_point (i, j), 1);
                     }
                 }
@@ -178,37 +196,116 @@ void update (Position position)
     tinygl_update ();
 }
 
+int algorithm(int i, int found, Position player1, Position enemy)
+{
+    i++;
+    if (i >= VISIBILITY) {
+        return 0;
+    }
+    int x = route[i].x;
+    int y = route[i].y;
+    for (int d = 0; d < 8; d++) {
+        if (!move(x+ds[d],y+ds[d+1])) {
+            if (((x+ds[d]) != route[i-1].x) || ((y+ds[d+1]) != route[i-1].y)) {
+                route[i+1].x = x + ds[d];
+                route[i+1].y = y + ds[d+1];
+                if ((route[i+1].x == player1.x) && (route[i+1].y == player1.y)) {
+                    return 1;
+                }
+                found = algorithm(i, found, player1 ,enemy);
+                if (found) {
+                    return 1;
+                }
+            }
+        }
+    d++;
+    }
+    i--;
+    return 0;
+}
+    
+Position update_enemy(Position player1, Position enemy)
+{
+    int found = 0;
+    route[0].x = enemy.x;
+    route[0].y = enemy.y;
+    int i = 0;
+    int x = route[i].x;
+    int y = route[i].y;
+    for (int d = 0; d < 8; d++) {
+        if (!move(x+ds[d],y+ds[d+1])) {
+            route[i+1].x = x + ds[d];
+            route[i+1].y = y + ds[d+1];
+            if ((route[i+1].x == player1.x) && (route[i+1].y == player1.y)) {
+                found = 1;
+                enemy.x = route[1].x;
+                enemy.y = route[1].y;
+                break;
+            }
+            found = algorithm(i, found, player1 ,enemy);
+            if (found) {
+                enemy.x = route[1].x;
+                enemy.y = route[1].y;
+                break;
+            }
+        }
+        d++;
+    }
+    return enemy;
+}
+
 int main ( void )
 {
     system_init();
     button_init ();
     navswitch_init ();
-    tinygl_init (DISPLAY_TASK_RATE);
-    tinygl_font_set (&font3x5_1);
-    tinygl_text_mode_set (TINYGL_TEXT_MODE_STEP);
+    tinygl_initialization();
     pacer_init(PACER_RATE);
-    Position position = position_init();
-    
+    Position player1 = position_init(2,1);
+    Position enemy = position_init(4,1);
+    int max = 5;
     int built = 0;
+    
+    
+    intro();
+    tinygl_text_mode_set (TINYGL_TEXT_MODE_STEP);
+    
     while(1)
     {
         for (int loop = 1; loop < 251; loop++) {
             pacer_wait();
             if (navswitch_push_event_p (NAVSWITCH_PUSH) & !built) {
-                r = loop / 50;
-                nodes = maps[r];
+                for (int i = 0; i < max; i++) {
+                    srand(loop+i);
+                    int x = (rand() % 29) + 2;
+                    srand((2*loop)+i);
+                    int y = (rand() % 30) + 1;
+                    if (!move(x,y)) {
+                        objects_maps[0][i].x = x;
+                        objects_maps[0][i].y = y;
+                    } else {
+                        max++;
+                    }
+                }
+                nodes = map;
                 built = 1;
             }
-            
             if (loop % (PACER_RATE/DISPLAY_TASK_RATE) == 0) {
-                update(position);
+                update(player1, enemy);
             }
             if (loop % (PACER_RATE/NAVSWITCH_TASK_RATE) == 0) {
-                position = navswitch_task(position);
+                player1 = navswitch_task(player1);
             }
             if (loop % (PACER_RATE/PLAYER_FLASH_RATE) == 0) {
-                flash = !flash;
+                if (built) {
+                    enemy = update_enemy(player1, enemy);
+                }
+                p1flash = !p1flash;
+            }
+            if (loop % (PACER_RATE/ENEMY_FLASH_RATE) == 0) {
+                eflash = !eflash;
             }
         }
     }
+    outro();
 }
