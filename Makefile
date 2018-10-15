@@ -12,11 +12,11 @@ DEL = rm
 
 
 # Default target.
-all: game.out
+all: maze.out
 
 
 # Compile: create object files from C source files.
-game.o: game.c ../../drivers/avr/system.h ../../drivers/button.h ../../drivers/display.h ../../fonts/font3x5_1_r.h ../../utils/font.h ../../utils/pacer.h ../../utils/tinygl.h
+maze.o: maze.c ../../drivers/avr/system.h ../../drivers/button.h ../../drivers/display.h ../../fonts/font3x5_1_r.h ../../utils/font.h ../../utils/pacer.h ../../utils/tinygl.h
 	$(CC) -c $(CFLAGS) $< -o $@
 
 pio.o: ../../drivers/avr/pio.c ../../drivers/avr/pio.h ../../drivers/avr/system.h
@@ -52,7 +52,7 @@ navswitch.o: ../../drivers/navswitch.c ../../drivers/avr/delay.h ../../drivers/a
 
 
 # Link: create ELF output file from object files.
-game.out: game.o pio.o system.o timer.o button.o display.o ledmat.o font.o pacer.o tinygl.o navswitch.o
+maze.out: maze.o pio.o system.o timer.o button.o display.o ledmat.o font.o pacer.o tinygl.o navswitch.o
 	$(CC) $(CFLAGS) $^ -o $@ -lm
 	$(SIZE) $@
 
@@ -65,8 +65,8 @@ clean:
 
 # Target: program project.
 .PHONY: program
-program: game.out
-	$(OBJCOPY) -O ihex game.out game.hex
-	dfu-programmer atmega32u2 erase; dfu-programmer atmega32u2 flash game.hex; dfu-programmer atmega32u2 start
+program: maze.out
+	$(OBJCOPY) -O ihex maze.out maze.hex
+	dfu-programmer atmega32u2 erase; dfu-programmer atmega32u2 flash maze.hex; dfu-programmer atmega32u2 start
 
 
