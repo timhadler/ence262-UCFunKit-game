@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include "ir_uart.h"
 #include "system.h"
 #include "button.h"
 #include "pacer.h"
@@ -62,13 +63,13 @@ Position position_init (int x, int y)
 }
 
 Position player1;
+Position player2;
 Position enemy;
 
-// Tims edit
 Position objects[OBJECTS] = {0};
 
-char score[2] = {'0', '0'};
-//.
+char p1_score[2] = {'0', '0'};
+char p2_score[] = {'0', '0'};
 
 
 void game_init(void)
@@ -141,6 +142,22 @@ int move(int x, int y)
     else
         return 0;
     }
+    
+    
+void communicate(void)
+{
+    char p1_x = player1.x + '0';
+    char p1_y = player1.y + '0';
+    
+    char p1_position[] = {p1_x, p1_y, '\0'};
+    
+    ir_uart_puts(p1_position);
+    
+    if (ir_uart_read_ready_p ()) {
+        player2.x = ir_uart_getc() - '0';
+        player2.y = ir_uart_getc() - '0';
+    }
+}
     
 
 // finds out if player is on an object
