@@ -1,3 +1,9 @@
+/*  Game C file
+ * Author: T. Hadler, S. Przychodzko
+ * Date:   17 Nov 2018
+ * Descr:  Main file for maze game
+ */
+
 #include <avr/io.h>
 #include "ir_uart.h"
 #include "system.h"
@@ -64,7 +70,6 @@ Position position_init (int x, int y)
 }
 
 Position player1;
-Position player2;
 Position enemy;
 
 Position objects[OBJECTS] = {0};
@@ -313,8 +318,6 @@ void update (int loop)
                                 tinygl_draw_point(tinygl_point (i, j), !eflash);
                                 }
                             }
-                        if (((i+player1.x-2) == player2.x) & ((j+player1.y-3) == player2.y))
-                            tinygl_draw_point(tinygl_point (i, j), !p1flash);
                         if (((i+player1.x-2) == enemy.x) & ((j+player1.y-3) == enemy.y)) {
                             tinygl_draw_point(tinygl_point (i, j), eflash);
                         } else if (move((i+player1.x-2),(j+player1.y-3))) {
