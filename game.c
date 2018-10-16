@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include "ir_uart.h"
 #include "system.h"
 #include "button.h"
 #include "pacer.h"
@@ -18,10 +19,14 @@
 
 #define ENEMY_FLASH_RATE 5
 
+#define MESSAGE_RATE 10
+
 #define height 31
 #define width 32
 
 #define VISIBILITY 10
+
+#define OBJECTS 10
 
 int map[62] = {0x7fff, 0xffff, 0x4000, 0x0001, 0x577d, 0x75fd, 
 0x5405, 0x5505, 0x57df, 0xdddd, 0x5050, 0x0011, 0x5fdf, 0x5ff5, 
@@ -36,6 +41,11 @@ int* nodes;
     
 static bool p1flash;
 static bool eflash;
+static int change_score;
+static int built;
+static bool gg;
+static int init_rand;
+static int start;
 
 typedef struct position_s {
     int x;
@@ -53,15 +63,78 @@ Position position_init (int x, int y)
     return position;
 }
 
-// Tims edit
-Position objects1[20] = {0};
-Position objects2[20] = {0};
+Position player1;
+Position player2;
+Position enemy;
 
-Position* objects_maps[] = {objects1, objects2};
+Position objects[OBJECTS] = {0};
 
-static int player_score = 0;
-static int r = 0;
-//.
+char score[2] = {'0', '0'};
+
+
+void game_init(void)
+{
+    system_init();
+    navswitch_init ();
+    ir_uart_init ();
+    pacer_init(PACER_RATE);
+    
+    tinygl_init (DISPLAY_TASK_RATE);
+    tinygl_font_set (&font3x5_1);
+    tinygl_text_mode_set (TINYGL_TEXT_MODE_STEP);
+    tinygl_text_dir_set (TINYGL_TEXT_DIR_ROTATE);
+}
+
+
+void intro(void)
+{
+    tinygl_text_speed_set (10);
+    tinygl_text_mode_set (TINYGL_TEXT_MODE_SCROLL);
+    
+    char* intro_message = "MAZE!";
+    tinygl_text(intro_message);
+    
+    init_rand = 0;
+    start = 0;
+    while ((!navswitch_push_event_p(NAVSWITCH_PUSH)) && (!start)) {
+        pacer_wait ();
+        
+        if (init_rand > 1000) {
+            init_rand = 0;
+        } else {
+            init_rand++;
+        }
+        if (ir_uart_read_ready_p ()) {
+            if (ir_uart_getc() == '1') {
+                start = 1;
+            }
+        }
+        tinygl_update ();
+        navswitch_update ();
+    }
+    ir_uart_putc('1');
+}
+
+
+void outro(void)
+{
+    tinygl_text_speed_set (20);
+    tinygl_text_mode_set (TINYGL_TEXT_MODE_SCROLL);
+    
+    tinygl_clear();
+    
+    char* ending_message = "THATS IT.GAME OVER MAN GAME OVER\0";
+    tinygl_text(ending_message);
+    
+    while (1) {
+        
+    pacer_wait ();
+        
+    tinygl_update ();
+    navswitch_update ();
+    }
+}
+
 
 int move(int x, int y)
 {
@@ -77,76 +150,176 @@ int move(int x, int y)
         return 0;
     }
     
+    
+void receive(void)
+{
+    if (ir_uart_read_ready_p ()) {
+        if (ir_uart_getc() == 'w') {
+            ir_uart_putc('r');
+            char p1 = ir_uart_getc();
+            char p2 = ir_uart_getc();
+            if ((p1 >= '0') && (p1 <= '4') && (p2 >= '0') && (p2 <= '4')) {
+                if ((p1 != score[0]) || (p2 != score[1])) {
+                    score[1] = p1;
+                    score[0] = p2;
+                    change_score = 250;
+                    if ((score[0] > '3') || (score[1] > '3')) {
+                        gg = 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void send(void)
+{
+    char p1_score[3] = {score[0], score[1], '\0'};
+    int read = 0;
+    ir_uart_putc('w');
+    while (!read) {
+        if (ir_uart_getc() == 'r')
+            ir_uart_puts(p1_score);
+            read = 1;
+    }
+}
+    
 
 // finds out if player is on an object
-bool is_on_object(Position position)
+bool is_on_object(Position position, int loop)
 {
+    int max = 1;
+    bool taken = 0;
     bool on_object = 0;
     
-    for (int i = 0; i < 20; i++) {
-        if (position.x == objects_maps[r][i].x && position.y == objects_maps[r][i].y) {
+    for (int i = 0; i < OBJECTS; i++) {
+        if (position.x == objects[i].x && position.y == objects[i].y) {
             on_object = 1;
-            
-            // remove object
-            objects_maps[r][i].x = 0x00;
-            objects_maps[r][i].y = 0x00;
+
+            // change object
+            for (int j = 0; j < max; j++) {
+                srand(loop+j);
+                int x = (rand() % 29) + 2;
+                srand((2*loop)+j);
+                int y = (rand() % 30) + 1;
+                if (!move(x,y)) {
+                    taken = 0;
+                    for (int k = 0; k < OBJECTS; k++) {
+                        if ((objects[k].x == x) && (objects[k].x == x)) {
+                            taken = 1;
+                        }
+                    }
+                    if (!taken) {
+                        objects[i].x = x;
+                        objects[i].y = y;
+                    } else {
+                        max++;
+                    }
+                } else {
+                    max++;
+                }
+            }
         }
     }
     return on_object;
-}    
+}  
 
-
-Position navswitch_task(Position player1)
+void navswitch_task(int loop)
 {
     navswitch_update ();
     int x = player1.x;
     int y = player1.y;
-    if (navswitch_push_event_p (NAVSWITCH_NORTH))
-        if ((y > 0) & !(move(x,(y-1))))
+    if (navswitch_push_event_p (NAVSWITCH_NORTH)) {
+        if ((y > 0) & !(move(x,(y-1)))) {
             player1.y--;
+        }
+    }
 
-    if (navswitch_push_event_p (NAVSWITCH_SOUTH))
-        if ((y < height) & !(move(x,(y+1))))
+    if (navswitch_push_event_p (NAVSWITCH_SOUTH)) {
+        if ((y < height) & !(move(x,(y+1)))) {
             player1.y++;
+        }
+    }
         
-    if (navswitch_push_event_p (NAVSWITCH_EAST))
-        if ((x < width) & !(move((x+1),y)))
+    if (navswitch_push_event_p (NAVSWITCH_EAST)) {
+        if ((x < width) & !(move((x+1),y))) {
             player1.x++;
+        }
+    }
         
-    if (navswitch_push_event_p (NAVSWITCH_WEST))
-        if ((x > 1) & !(move((x-1),y)))
+    if (navswitch_push_event_p (NAVSWITCH_WEST)) {
+        if ((x > 1) & !(move((x-1),y))) {
             player1.x--;
+        }
+    }
     
     // picking up object event
-    if (navswitch_push_event_p (NAVSWITCH_PUSH)) 
-        if (is_on_object(player1))
-            player_score++;
-            
-    return player1;
+    if (navswitch_push_event_p (NAVSWITCH_PUSH)) {
+        if (is_on_object(player1, loop)) {
+            tinygl_clear();
+            score[0]++;
+            send();
+            change_score = 250;
+            if (score[0] > '3') {
+                gg = 1;
+            }
+        }
+    }
 }
 
-
-
-void update (Position player1, Position enemy)
+void got_rekt(int loop)
 {
     tinygl_clear();
-    tinygl_draw_point(tinygl_point (2, 3), p1flash);
-    int k = 0;
-    for ( int i = 0; i < 5; i++ )
-	{
-		for ( int j = 0; j < 7; j++ )
-		{
-            if (((i+player1.x-2) >= 0) & ((i+player1.x-2) < width)) {
-                if (((j+player1.y-3) >= 0) & ((j+player1.y-3) < height)) {
-                    for (k = 0; k < 5; k++) {
-                        if (((i+player1.x-2) == objects_maps[0][k].x) & ((j+player1.y-3) == objects_maps[0][k].y)) {
-                            tinygl_draw_point(tinygl_point (i, j), !eflash);
+    score[1]++;
+    send();
+    change_score = 250;
+    int max = 1;
+    for (int i = 0; i < max; i++) {
+        srand(loop+i);
+        int x = (rand() % 29) + 2;
+        srand((2*loop)+i);
+        int y = (rand() % 30) + 1;
+        if (!move(x,y)) {
+            player1 = position_init(x,y);
+        } else {
+            max++;
+        }
+    }
+    if (score[1] > '3') {
+        gg = 1;
+    }
+}
+
+void update (int loop)
+{
+    if ((player1.x == enemy.x) && (player1.y == enemy.y)) {
+        got_rekt(loop);
+    }
+    if (change_score) {
+        tinygl_text(score);
+        change_score--;
+    } else {
+        tinygl_clear();
+        tinygl_draw_point(tinygl_point (2, 3), p1flash);
+        int k = 0;
+        for ( int i = 0; i < 5; i++ )
+        {
+            for ( int j = 0; j < 7; j++ )
+            {
+                if (((i+player1.x-2) >= 0) & ((i+player1.x-2) < width)) {
+                    if (((j+player1.y-3) >= 0) & ((j+player1.y-3) < height)) {
+                        for (k = 0; k < OBJECTS; k++) {
+                            if (((i+player1.x-2) == objects[k].x) & ((j+player1.y-3) == objects[k].y)) {
+                                tinygl_draw_point(tinygl_point (i, j), !eflash);
+                                }
                             }
+                        if (((i+player1.x-2) == player2.x) & ((j+player1.y-3) == player2.y))
+                            tinygl_draw_point(tinygl_point (i, j), !p1flash);
+                        if (((i+player1.x-2) == enemy.x) & ((j+player1.y-3) == enemy.y)) {
+                            tinygl_draw_point(tinygl_point (i, j), eflash);
+                        } else if (move((i+player1.x-2),(j+player1.y-3))) {
+                            tinygl_draw_point(tinygl_point (i, j), 1);
                         }
-                    if (((i+player1.x-2) == enemy.x) & ((j+player1.y-3) == enemy.y)) {
-                        tinygl_draw_point(tinygl_point (i, j), eflash);
-                    } else if (move((i+player1.x-2),(j+player1.y-3))) {
-                        tinygl_draw_point(tinygl_point (i, j), 1);
                     }
                 }
             }
@@ -155,7 +328,7 @@ void update (Position player1, Position enemy)
     tinygl_update ();
 }
 
-int algorithm(int i, int found, Position player1, Position enemy)
+int algorithm(int i, int found)
 {
     i++;
     if (i >= VISIBILITY) {
@@ -171,7 +344,7 @@ int algorithm(int i, int found, Position player1, Position enemy)
                 if ((route[i+1].x == player1.x) && (route[i+1].y == player1.y)) {
                     return 1;
                 }
-                found = algorithm(i, found, player1 ,enemy);
+                found = algorithm(i, found);
                 if (found) {
                     return 1;
                 }
@@ -183,7 +356,7 @@ int algorithm(int i, int found, Position player1, Position enemy)
     return 0;
 }
     
-Position update_enemy(Position player1, Position enemy)
+void update_enemy(void)
 {
     int found = 0;
     route[0].x = enemy.x;
@@ -201,7 +374,7 @@ Position update_enemy(Position player1, Position enemy)
                 enemy.y = route[1].y;
                 break;
             }
-            found = algorithm(i, found, player1 ,enemy);
+            found = algorithm(i, found);
             if (found) {
                 enemy.x = route[1].x;
                 enemy.y = route[1].y;
@@ -210,57 +383,71 @@ Position update_enemy(Position player1, Position enemy)
         }
         d++;
     }
-    return enemy;
 }
 
 int main ( void )
 {
-    system_init();
-    button_init ();
-    navswitch_init ();
-    tinygl_init (DISPLAY_TASK_RATE);
-    tinygl_font_set (&font3x5_1);
+    gg = 0;
+    game_init();
+    
+    enemy = position_init(30,1);
+    int max = OBJECTS+2;
+    int index = -2;
+    built = 0;
+
+    intro();
+    tinygl_text_speed_set (10);
     tinygl_text_mode_set (TINYGL_TEXT_MODE_STEP);
-    pacer_init(PACER_RATE);
-    Position player1 = position_init(2,1);
-    Position enemy = position_init(4,1);
-    int max = 5;
-    int built = 0;
-    while(1)
+    tinygl_text_dir_set (TINYGL_TEXT_DIR_ROTATE);
+    while(!gg)
     {
-        for (int loop = 1; loop < 251; loop++) {
+        for (int loop = 1; loop < 1001; loop++) {
             pacer_wait();
-            if (navswitch_push_event_p (NAVSWITCH_PUSH) & !built) {
-                for (int i = 0; i < max; i++) {
-                    srand(loop+i);
-                    int x = (rand() % 29) + 2;
-                    srand((2*loop)+i);
-                    int y = (rand() % 30) + 1;
-                    if (!move(x,y)) {
-                        objects_maps[0][i].x = x;
-                        objects_maps[0][i].y = y;
-                    } else {
-                        max++;
+            if (navswitch_push_event_p(NAVSWITCH_PUSH) || start) {
+                if (!built) {
+                    for (int i = 0; i < max; i++) {
+                        srand(init_rand+i);
+                        int x = (rand() % 29) + 2;
+                        srand((2*init_rand)+i);
+                        int y = (rand() % 30) + 1;
+                        if (!move(x,y)) {
+                            if (index == -2) {
+                                player1 = position_init(x,y);
+                            } else if (index == -1) {
+                                enemy = position_init(x,y);
+                            } else {
+                                objects[index].x = x;
+                                objects[index].y = y;
+                            }
+                            index++;
+                        } else {
+                            max++;
+                        }
+                    }
+                    nodes = map;
+                    built = 1;
+                    change_score = 0;
+                }
+            }
+            if (built) {
+                receive();
+                if (loop % (PACER_RATE/DISPLAY_TASK_RATE) == 0) {
+                    update(loop);
+                }
+                if (loop % (PACER_RATE/NAVSWITCH_TASK_RATE) == 0) {
+                    if (built && !change_score) {
+                        navswitch_task(loop);
                     }
                 }
-                nodes = map;
-                built = 1;
-            }
-            if (loop % (PACER_RATE/DISPLAY_TASK_RATE) == 0) {
-                update(player1, enemy);
-            }
-            if (loop % (PACER_RATE/NAVSWITCH_TASK_RATE) == 0) {
-                player1 = navswitch_task(player1);
-            }
-            if (loop % (PACER_RATE/PLAYER_FLASH_RATE) == 0) {
-                if (built) {
-                    enemy = update_enemy(player1, enemy);
+                if (loop % (PACER_RATE/PLAYER_FLASH_RATE) == 0) {
+                    update_enemy();
+                    p1flash = !p1flash;
                 }
-                p1flash = !p1flash;
-            }
-            if (loop % (PACER_RATE/ENEMY_FLASH_RATE) == 0) {
-                eflash = !eflash;
+                if (loop % (PACER_RATE/ENEMY_FLASH_RATE) == 0) {
+                    eflash = !eflash;
+                }
             }
         }
     }
+    outro();
 }
