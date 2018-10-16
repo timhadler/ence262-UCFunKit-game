@@ -12,11 +12,11 @@ DEL = rm
 
 
 # Default target.
-all: maze.out
+all: game.out
 
 
 # Compile: create object files from C source files.
-maze.o: maze.c ../../drivers/avr/system.h ../../drivers/button.h ../../drivers/display.h ../../fonts/font3x5_1_r.h ../../utils/font.h ../../utils/pacer.h ../../utils/tinygl.h ../../drivers/avr/ir_uart.h
+game.o: game.c ../../drivers/avr/system.h ../../drivers/button.h ../../drivers/display.h ../../fonts/font3x5_1_r.h ../../utils/font.h ../../utils/pacer.h ../../utils/tinygl.h ../../drivers/avr/ir_uart.h
 	$(CC) -c $(CFLAGS) $< -o $@
 
 pio.o: ../../drivers/avr/pio.c ../../drivers/avr/pio.h ../../drivers/avr/system.h
@@ -63,7 +63,7 @@ prescale.o: ../../drivers/avr/prescale.c ../../drivers/avr/system.h ../../driver
 
 
 # Link: create ELF output file from object files.
-maze.out: maze.o pio.o system.o timer.o button.o display.o ledmat.o font.o pacer.o tinygl.o navswitch.o ir_uart.o usart1.o timer0.o prescale.o 
+game.out: game.o pio.o system.o timer.o button.o display.o ledmat.o font.o pacer.o tinygl.o navswitch.o ir_uart.o usart1.o timer0.o prescale.o 
 	$(CC) $(CFLAGS) $^ -o $@ -lm
 	$(SIZE) $@
 
@@ -76,8 +76,8 @@ clean:
 
 # Target: program project.
 .PHONY: program
-program: maze.out
-	$(OBJCOPY) -O ihex maze.out maze.hex
-	dfu-programmer atmega32u2 erase; dfu-programmer atmega32u2 flash maze.hex; dfu-programmer atmega32u2 start
+program: game.out
+	$(OBJCOPY) -O ihex game.out game.hex
+	dfu-programmer atmega32u2 erase; dfu-programmer atmega32u2 flash game.hex; dfu-programmer atmega32u2 start
 
 
