@@ -127,7 +127,7 @@ void outro(void)
     tinygl_text_mode_set (TINYGL_TEXT_MODE_SCROLL);
     tinygl_clear();
     
-    char* ending_message = "THATS IT.GAME OVER MAN GAME OVER\0";
+    char* ending_message = "GAME OVER";
     
     if (score[0] > score[1]) {
         ending_message = "Winner!";
