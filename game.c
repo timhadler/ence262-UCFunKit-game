@@ -32,7 +32,7 @@
 
 #define VISIBILITY 10
 
-#define OBJECTS 10
+#define OBJECTS 20
 
 int map[62] = {0x7fff, 0xffff, 0x4000, 0x0001, 0x577d, 0x75fd, 
 0x5405, 0x5505, 0x57df, 0xdddd, 0x5050, 0x0011, 0x5fdf, 0x5ff5, 
@@ -123,16 +123,16 @@ void intro(void)
 
 void outro(void)
 {
-    tinygl_text_speed_set (20);
+    tinygl_text_speed_set (10);
     tinygl_text_mode_set (TINYGL_TEXT_MODE_SCROLL);
     tinygl_clear();
     
-    char* ending_message = "GAME OVER";
+    char* ending_message;
     
     if (score[0] > score[1]) {
-        ending_message = "Winner!";
+        ending_message = "WINNER!";
     } else {
-        ending_message = "Loser! :(";
+        ending_message = "LOSER! :(";
     }
     
     tinygl_text(ending_message);
