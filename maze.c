@@ -68,8 +68,8 @@ Position enemy;
 
 Position objects[OBJECTS] = {0};
 
-char p1_score[2] = {'0', '0'};
-char p2_score[] = {'0', '0'};
+char p1_score[] = {'0', '0', '\0'};
+char p2_score[] = {'0', '0', '\0'};
 
 
 void game_init(void)
@@ -111,12 +111,12 @@ void intro(void)
 
 void outro(void)
 {
-    tinygl_text_speed_set (20);
+    tinygl_text_speed_set (10);
     tinygl_text_mode_set (TINYGL_TEXT_MODE_SCROLL);
     
     tinygl_clear();
     
-    char* ending_message = "THATS IT.GAME OVER MAN GAME OVER\0";
+    char* ending_message = p1_score;
     tinygl_text(ending_message);
     
     while (1) {
@@ -156,6 +156,18 @@ void communicate(void)
     if (ir_uart_read_ready_p ()) {
         player2.x = ir_uart_getc() - '0';
         player2.y = ir_uart_getc() - '0';
+    }
+}
+    
+
+void communicate_score(void)
+{
+    
+    ir_uart_puts(p1_score);
+    
+    if (ir_uart_read_ready_p ()) {
+        p2_score[0] = ir_uart_getc();
+        p2_score[1] = ir_uart_getc();
     }
 }
     
@@ -424,5 +436,6 @@ int main ( void )
             }
         }
     }
+    communicate_score();
     outro();
 }
