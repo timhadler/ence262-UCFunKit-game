@@ -1,7 +1,7 @@
 # File:   Makefile
-# Author: M. P. Hayes, UCECE
-# Date:   12 Sep 2010
-# Descr:  Makefile for game
+# Author: T. Hadler, S. Przychodzko
+# Date:   17 Nov 2018
+# Descr:  Makefile for maze game
 
 # Definitions.
 CC = avr-gcc
